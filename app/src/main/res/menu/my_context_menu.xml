@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+<group  android:id="@+id/group1">
+    <item
+        android:id="@+id/home"
+        android:icon="@mipmap/home"
+        app:showAsAction="ifRoom"
+        android:title="Home" />
+    <item
+        android:id="@+id/id_previous"
+        android:title="Sali su"
+        android:icon="@mipmap/arrowup"
+        app:showAsAction="ifRoom"
+        />
+    </group>
+
+   <group  android:id="@+id/group2">
+    <item
+        android:id="@+id/delete_id"
+        android:title="Elimina"
+        android:icon="@mipmap/ic_delete"
+        />
+
+   </group>
+
+    <group android:id="@+id/group3">
+        <item
+            android:id="@+id/deleteid"
+            android:title="Elimina"
+            android:icon="@mipmap/ic_delete"
+            />
+    <item
+        android:id="@+id/sposta2"
+        android:title="Sposta"
+        />
+    <item
+        android:id="@+id/id_copia3"
+        android:title="Copia"
+        />
+        <item
+            android:id="@+id/rinomina"
+            android:title="Rinomina"/>
+    </group>
+
+</menu>
