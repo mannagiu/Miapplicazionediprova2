@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.provider.Settings;
 import android.support.annotation.RequiresApi;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
@@ -33,20 +34,26 @@ import java.util.Iterator;
 
 public class MainActivity extends AppCompatActivity implements android.widget.CompoundButton.OnCheckedChangeListener {
 
-    //ARRAY DI IMMAGINI:
+    /**
+     * array di immagini utilizzate nell'applicazione
+     */
     ArrayList<Integer> array_immagini;
-    //ArrayList con il nome delle cartelle e/o file:
+    /**
+     * rappresenta il nome degli elementi (file, cartelle)
+     */
     ArrayList<String> array_nomielementi;
-    //Gli array sopra dichiarati mi servono per riempire la listview
-    //Struttura dati b-albero per tenere in memoria le cartelle ecc
+    /**
+     * Gli array sopra dichiarati mi servono per riempire la listview
+     * Struttura dati b-albero per tenere in memoria le cartelle ecc
+     */
     ArrayList<String> array_elementiselezionati;
+    /**
+     * Stringa dove viene memorizzata il percorso corrente
+     */
+    String currentPath = "/";
 
-
-    BTree<Myobject> albero_elementi;
-    ArrayList<Myobject> array;
     JSONArray arrayjsonesterno ;
     TextView textview;
-
 
     FileInputStream fIn = null;
     FileOutputStream fOut = null;
@@ -63,12 +70,12 @@ public class MainActivity extends AppCompatActivity implements android.widget.Co
     int count=0;
     int j=0;
 
-
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
         ImageView im = (ImageView) findViewById(R.id.ima);
         im.setImageResource(R.drawable.addfolder);
         listView = (ListView) findViewById(R.id.listv);
@@ -77,6 +84,7 @@ public class MainActivity extends AppCompatActivity implements android.widget.Co
         array_elementiselezionati= new ArrayList<>();
         // arrayobj = new ArrayList<>();
         arrayjsonesterno=new JSONArray();
+
         final Myadapter myAdapter = new Myadapter(MainActivity.this, array_immagini ,array_nomielementi);
         listView.setAdapter(myAdapter);
         textview=(TextView) findViewById(R.id.view);
@@ -85,32 +93,44 @@ public class MainActivity extends AppCompatActivity implements android.widget.Co
 
         filedirectory = new File(Environment.getExternalStorageDirectory(), "Documents/giulia5.json");
 
-
-         lettura=leggifile(filedirectory);
+        lettura=leggifile(filedirectory);
         //Quello che leggo lo metto in un array json
-         arrayjsonesterno= parseJSON(lettura,array_immagini,array_nomielementi);
+        System.out.println(lettura);
+        arrayjsonesterno= parseJSON(lettura, array_immagini, array_nomielementi);
 
-         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+
             @Override
             public void onItemClick(AdapterView<?> adattatore, final View componente, int pos, long id) {
-         // recupero il titolo memorizzato nella riga tramite l'ArrayAdapter
+
                 nome_cartella = (String) listView.getItemAtPosition(pos);
+                /**
+                 * aggiungo la cartella selezionata al percorso corrente
+                 */
+                currentPath +=  nome_cartella + "/" ;
+
+                TextView uiCurrentPath = (TextView)findViewById(R.id.currentPath);
+                uiCurrentPath.setText(currentPath);
+
+                /*
                 Intent pagina2 = new Intent(MainActivity.this, Main2Activity.class);
                 pagina2.putExtra("nome cartella", nome_cartella);
                 startActivity(pagina2);
-
+                */
             }
+
         });
 
-       listView.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE_MODAL);
+        listView.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE_MODAL);
 
         listView.setMultiChoiceModeListener(new AbsListView.MultiChoiceModeListener() {
+
+
             @Override
             public boolean onCreateActionMode(android.view.ActionMode mode, Menu menu) {
 
                 MenuInflater inflater = mode.getMenuInflater();
                 inflater.inflate(R.menu.my_context_menu, menu);
-
 
                 return true;
 
@@ -118,14 +138,13 @@ public class MainActivity extends AppCompatActivity implements android.widget.Co
 
             @Override
             public boolean onPrepareActionMode(android.view.ActionMode mode, Menu menu) {
-
-
                 return false;
             }
 
             @RequiresApi(api = Build.VERSION_CODES.KITKAT)
             @Override
             public boolean onActionItemClicked(android.view.ActionMode mode, MenuItem item) {
+
 
                 switch (item.getItemId()) {
                     case R.id.delete_id:
@@ -146,8 +165,6 @@ public class MainActivity extends AppCompatActivity implements android.widget.Co
                         return false;
                 }
 
-
-
             }
 
             @Override
@@ -162,17 +179,17 @@ public class MainActivity extends AppCompatActivity implements android.widget.Co
                 array_elementiselezionati.add(array_nomielementi.get(position));
                 
 
-            }});
+            }
 
-
-
-
-
-
+        });
 
         im.setOnClickListener(new View.OnClickListener() {
+
             @Override
             public void onClick(final View v) {
+
+                System.out.println("onClick");
+
                 final AlertDialog.Builder mBuilder = new AlertDialog.Builder(MainActivity.this);
                 final View mView = getLayoutInflater().inflate(R.layout.dialog_newfolder, null);
                 final EditText crea_cartella = (EditText) mView.findViewById(R.id.nome_cartella);
@@ -181,9 +198,9 @@ public class MainActivity extends AppCompatActivity implements android.widget.Co
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
 
-                            str=Crea_cartella(crea_cartella,arrayjsonesterno,array_immagini,array_nomielementi);
-                            textview.setText(str);
-                            scrivifile(str,filedirectory);
+                    str=Crea_cartella(crea_cartella,arrayjsonesterno,array_immagini,array_nomielementi);
+                    textview.setText(str);
+                    scrivifile(str,filedirectory);
                     }
 
                 });
@@ -202,14 +219,15 @@ public class MainActivity extends AppCompatActivity implements android.widget.Co
                 dialog.show();
 
                 }
-                });
+        });
 
-        }
+    }
 
 
 
 
 private String Crea_cartella(EditText crea,JSONArray parse, ArrayList<Integer> immagini,ArrayList<String> nomi) {
+
     String s;
     JSONObject obj_nuovo;
     JSONArray array_nuovo;
@@ -242,57 +260,57 @@ private String Crea_cartella(EditText crea,JSONArray parse, ArrayList<Integer> i
     }
     return null;
 }
-private void Rinomina(final ArrayList<String> selezionati, final ArrayList<String> nomi, final File f){
+
+private void Rinomina(final ArrayList<String> selezionati, final ArrayList<String> nomi, final File f) {
 
     final AlertDialog.Builder mBuilder = new AlertDialog.Builder(MainActivity.this);
     final View mView = getLayoutInflater().inflate(R.layout.dialog_rename, null);
     final EditText rinomina = (EditText) mView.findViewById(R.id.rinomina_cartella);
 
-
     mBuilder.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
         @Override
         public void onClick(DialogInterface dialog, int which) {
-            int flag = 0;
-            int i=0;
-            JSONArray parse=new JSONArray();
-            String temp;
-            JSONArray elem1=new JSONArray(  );
+        int flag = 0;
+        int i=0;
+        JSONArray parse=new JSONArray();
+        String temp;
+        JSONArray elem1=new JSONArray(  );
 
-            if (!rinomina.getText().toString().isEmpty()) {
-                Toast.makeText(MainActivity.this, "Elemento rinominato", Toast.LENGTH_SHORT).show();
-                String s;
-                s = rinomina.getText().toString();
-                String elem=selezionati.get(0);
-                int k=nomi.indexOf(elem);
-               nomi.set(k,s);
-                count=0;
-                selezionati.clear();
-                temp=leggifile(f);
+        if (!rinomina.getText().toString().isEmpty()) {
+            Toast.makeText(MainActivity.this, "Elemento rinominato", Toast.LENGTH_SHORT).show();
+            String s;
+            s = rinomina.getText().toString();
+            String elem=selezionati.get(0);
+            int k=nomi.indexOf(elem);
+           nomi.set(k,s);
+            count=0;
+            selezionati.clear();
+            temp=leggifile(f);
 
-                try {
-                    parse = new JSONArray(temp);
-                    JSONObject obj = new JSONObject();
-                    for (i = 0; i < parse.length() && flag == 0; i++) {
-                        //Estraggo l' oggetto json dall'array, in particolare l'i-esimo oggetto json
-                        obj = parse.getJSONObject(i);
-                        //ottengo le chiavi che ci sono nel mio array json
-                        Iterator iterator = obj.keys();
-                        while (iterator.hasNext() && flag == 0) {
-                            String key = (String) iterator.next();
-                            //uso le chiavi per aggiungerle alla lista che mi serve poi per rappresentare il tutto
-                            if (elem.equals(key)) {
-                                flag = 1;
-                                //obj.remove(elem);
-                                //Voglio cambiare il valore della chiave
-                            }
-
+            try {
+                parse = new JSONArray(temp);
+                JSONObject obj = new JSONObject();
+                for (i = 0; i < parse.length() && flag == 0; i++) {
+                    //Estraggo l' oggetto json dall'array, in particolare l'i-esimo oggetto json
+                    obj = parse.getJSONObject(i);
+                    //ottengo le chiavi che ci sono nel mio array json
+                    Iterator iterator = obj.keys();
+                    while (iterator.hasNext() && flag == 0) {
+                        String key = (String) iterator.next();
+                        //uso le chiavi per aggiungerle alla lista che mi serve poi per rappresentare il tutto
+                        if (elem.equals(key)) {
+                            flag = 1;
+                            //obj.remove(elem);
+                            //Voglio cambiare il valore della chiave
                         }
-                    } scrivifile(parse.toString(),f);
+
+                    }
+                } scrivifile(parse.toString(),f);
 
 
-            } catch (Exception e) {
-                    e.printStackTrace();
-                }}
+        } catch (Exception e) {
+                e.printStackTrace();
+            }}
         }
     });
 
@@ -418,32 +436,8 @@ private JSONArray Elimina_cartella(ArrayList<String> daEliminare, ArrayList<Inte
         String n=array_nomielementi.get(pos);
         buttonView.setSelected(isChecked);
     }
+
 }
-
-//POSSO FARE LA LETTURA DEL FILE ANCHE COSÌ,
-/*
-*   try {
-            stream = new FileInputStream(yourFile);
-
-            try {
-                fc = stream.getChannel();
-                bb = fc.map(FileChannel.MapMode.READ_ONLY, 0, fc.size());
-
-                jsonStr = Charset.defaultCharset().decode(bb).toString();
-                tv.setText(jsonStr);
-
-
-            } catch (Exception e) {
-                e.printStackTrace();
-            } finally {
-                stream.close();
-            }
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }*/
-
 
 
 
