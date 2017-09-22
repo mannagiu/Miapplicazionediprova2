@@ -7,6 +7,10 @@ import android.widget.BaseAdapter;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.util.ArrayList;
 
 /**
@@ -54,6 +58,24 @@ public class Myadapter extends BaseAdapter {
         images.setImageResource( listid.get( position ) );
         text.setText( nameList.get( position ) );
         return convertView;
+    }
+
+    public void setData(JSONArray nameList) {
+
+        this.nameList.clear();
+
+        if (nameList != null) {
+            for (int i=0; i < nameList.length();i++){
+                try {
+                    this.nameList.add(nameList.getString(i));
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        System.out.println("setData : " + this.nameList);
+        notifyDataSetChanged();
     }
 
 

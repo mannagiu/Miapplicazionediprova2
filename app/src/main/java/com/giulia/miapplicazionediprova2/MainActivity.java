@@ -38,21 +38,41 @@ public class MainActivity extends AppCompatActivity implements android.widget.Co
      * array di immagini utilizzate nell'applicazione
      */
     ArrayList<Integer> array_immagini;
+
     /**
      * rappresenta il nome degli elementi (file, cartelle)
      */
     ArrayList<String> array_nomielementi;
+
     /**
      * Gli array sopra dichiarati mi servono per riempire la listview
      * Struttura dati b-albero per tenere in memoria le cartelle ecc
      */
     ArrayList<String> array_elementiselezionati;
+
     /**
      * Stringa dove viene memorizzata il percorso corrente
      */
     String currentPath = "/";
 
-    JSONArray arrayjsonesterno ;
+    /**
+     *  Struttura utilizzata per memorizzare la gerarchia di file e cartelle
+     *  i.e.
+     *  {
+     *      { type: "jpeg", name: "animal.jpeg"},
+     *      "Documents": [
+     *          { type: "txt", name: "file.txt" }
+     *      ],
+     *      "Applicazioni": [
+     *          { type: "exe", name: "TelematicoSuite.exe" }
+     *          { type: "iso", name: "windows-x86.iso" }
+     *      ]
+     *
+     *  }
+     */
+    JSONObject strutturaDirectory = new JSONObject();
+
+    JSONArray arrayjsonesterno;
     TextView textview;
 
     FileInputStream fIn = null;
@@ -80,7 +100,7 @@ public class MainActivity extends AppCompatActivity implements android.widget.Co
         im.setImageResource(R.drawable.addfolder);
         listView = (ListView) findViewById(R.id.listv);
         array_immagini = new ArrayList<>();
-        array_nomielementi = new ArrayList<>();
+        array_nomielementi = new ArrayList<String>();
         array_elementiselezionati= new ArrayList<>();
         // arrayobj = new ArrayList<>();
         arrayjsonesterno=new JSONArray();
@@ -88,10 +108,8 @@ public class MainActivity extends AppCompatActivity implements android.widget.Co
         final Myadapter myAdapter = new Myadapter(MainActivity.this, array_immagini ,array_nomielementi);
         listView.setAdapter(myAdapter);
         textview=(TextView) findViewById(R.id.view);
-        //CheckBox cb=(CheckBox)findViewById(R.id.cb);
-        //cb.performClick();
 
-        filedirectory = new File(Environment.getExternalStorageDirectory(), "Documents/giulia5.json");
+        filedirectory = new File(Environment.getExternalStorageDirectory(), "Documents/mauro.json");
 
         lettura=leggifile(filedirectory);
         //Quello che leggo lo metto in un array json
@@ -104,7 +122,7 @@ public class MainActivity extends AppCompatActivity implements android.widget.Co
             public void onItemClick(AdapterView<?> adattatore, final View componente, int pos, long id) {
 
                 nome_cartella = (String) listView.getItemAtPosition(pos);
-                /**
+                /**v
                  * aggiungo la cartella selezionata al percorso corrente
                  */
                 currentPath +=  nome_cartella + "/" ;
@@ -112,11 +130,16 @@ public class MainActivity extends AppCompatActivity implements android.widget.Co
                 TextView uiCurrentPath = (TextView)findViewById(R.id.currentPath);
                 uiCurrentPath.setText(currentPath);
 
-                /*
-                Intent pagina2 = new Intent(MainActivity.this, Main2Activity.class);
-                pagina2.putExtra("nome cartella", nome_cartella);
-                startActivity(pagina2);
-                */
+                try {
+
+                    JSONObject obj = arrayjsonesterno.getJSONObject(pos);
+                    JSONArray jArray = obj.getJSONArray(nome_cartella);
+                    myAdapter.setData(jArray);
+
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+
             }
 
         });
@@ -226,39 +249,53 @@ public class MainActivity extends AppCompatActivity implements android.widget.Co
 
 
 
-private String Crea_cartella(EditText crea,JSONArray parse, ArrayList<Integer> immagini,ArrayList<String> nomi) {
 
-    String s;
+private String Crea_cartella(EditText crea, JSONArray directory, ArrayList<Integer> immagini, ArrayList<String> nomi) {
+
     JSONObject obj_nuovo;
     JSONArray array_nuovo;
     String risultato;
 
     if (!crea.getText().toString().isEmpty()) {
-        Toast.makeText(MainActivity.this, "Cartella aggiunta", Toast.LENGTH_SHORT).show();
 
-        s = crea.getText().toString();
-        //Myobject o=new Myobject(s,"dir",false);
-        //arrayobj.add(o);
-        nomi.add(s);
+        String nomeElemento = crea.getText().toString();
+        nomi.add(nomeElemento);
         immagini.add(R.drawable.folder);
 
         obj_nuovo = new JSONObject();
         array_nuovo = new JSONArray();
 
         try {
-            obj_nuovo.put(s, array_nuovo);
+            obj_nuovo.put(nomeElemento, array_nuovo);
         } catch (JSONException e) {
             e.printStackTrace();
         }
         //aggiungo all' array json la cartella
 
-        parse.put(obj_nuovo);
-        //aggiorno il file
+        directory.put(obj_nuovo);
+        /**
+         * controllo il risultato dell'inserimento della cartella
+         */
         risultato = parse.toString();
+
+        Toast.makeText(MainActivity.this, "Cartella aggiunta", Toast.LENGTH_SHORT).show();
 
         return risultato;
     }
     return null;
+}
+
+/**
+ *
+ * @param testo testo dell'elemento da inserire
+ * @param directory
+ * @param immagini
+ * @param nomi
+ * @param type
+ */
+private void creaElemento(EditText testo, JSONArray directory,  ArrayList<Integer> immagini, ArrayList<String> nomi, String type) {
+
+
 }
 
 private void Rinomina(final ArrayList<String> selezionati, final ArrayList<String> nomi, final File f) {
