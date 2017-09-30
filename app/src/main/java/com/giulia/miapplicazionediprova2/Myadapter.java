@@ -12,6 +12,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by giulia on 26/06/17.
@@ -55,26 +56,25 @@ public class Myadapter extends BaseAdapter {
         }
         ImageView images = (ImageView) convertView.findViewById( R.id.imageView );
         TextView text = (TextView) convertView.findViewById( R.id.textView );
-        images.setImageResource( listid.get( position ) );
+        // images.setImageResource( listid.get( position ) );
         text.setText( nameList.get( position ) );
         return convertView;
     }
 
-    public void setData(JSONArray nameList) {
 
-        this.nameList.clear();
+    public void setData(TreeNode<JSONObject> currentNode) {
 
-        if (nameList != null) {
-            for (int i=0; i < nameList.length();i++){
-                try {
-                    this.nameList.add(nameList.getString(i));
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
+        ArrayList<String> temp = new ArrayList<>();
+
+        for (TreeNode<JSONObject> child :currentNode.getChildren()) {
+            try {
+                temp.add(child.data.get("name").toString());
+            } catch (JSONException e) {
+                e.printStackTrace();
             }
         }
 
-        System.out.println("setData : " + this.nameList);
+        this.nameList = temp;
         notifyDataSetChanged();
     }
 
