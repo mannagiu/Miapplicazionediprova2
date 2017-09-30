@@ -1,8 +1,6 @@
 package com.giulia.miapplicazionediprova2;
 
 import android.content.DialogInterface;
-import android.content.Intent;
-import android.os.Build;
 import android.os.Bundle;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
@@ -15,7 +13,6 @@ import android.widget.TextView;
 import org.json.JSONException;
 import org.json.JSONObject;
 import java.util.ArrayList;
-import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -27,7 +24,7 @@ public class MainActivity extends AppCompatActivity {
      */
     private TreeNode<JSONObject> root;
     private TreeNode<JSONObject> currentNode;
-    private String currentPath = "/";
+    private ArrayList<String> currentPath = new ArrayList<>();
     private TextView textview;
     private ListView listView;
 
@@ -38,14 +35,13 @@ public class MainActivity extends AppCompatActivity {
         // #########################################################################
         JSONObject objRoot = new JSONObject();
         try {
-            objRoot.put("type", "folder");
+            objRoot.put("type", "none");
             objRoot.put("name", "root");
             root = new TreeNode<JSONObject>(objRoot);
             currentNode = root;
         } catch (JSONException e) {
             e.printStackTrace();
         }
-
     }
 
     /**
@@ -58,38 +54,54 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        ImageView im = (ImageView) findViewById(R.id.ima);
-        im.setImageResource(R.drawable.addfolder);
+        ImageView aggiungiElemento = (ImageView) findViewById(R.id.aggiungiElemento);
+        aggiungiElemento.setImageResource(R.drawable.addfolder);
         listView = (ListView) findViewById(R.id.listv);
 
         // adattatore per scambiare dati con la listView
         final Myadapter myAdapter = new Myadapter(MainActivity.this, new ArrayList<Integer>(), new ArrayList<String>());
         listView.setAdapter(myAdapter);
-        textview=(TextView) findViewById(R.id.view);
+        textview = (TextView) findViewById(R.id.view);
 
+        /**
+         *  click su un elemento della lista
+         */
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
 
             @Override
             public void onItemClick(AdapterView<?> adattatore, final View componente, int pos, long id) {
 
-            String nomeCartella = (String) listView.getItemAtPosition(pos);
-            /**
-             * aggiungo la cartella selezionata al percorso corrente
-             */
-            currentPath +=  nomeCartella + "/" ;
+                String nomeCartella = (String) listView.getItemAtPosition(pos);
+                String displayPath = "";
 
-            TextView uiCurrentPath = (TextView)findViewById(R.id.currentPath);
-            uiCurrentPath.setText(currentPath);
+                // se l'elemento è il padre vado al parent e rimuovo elemento da currentPath
+                // TODO: sistemare codice
 
-            myAdapter.setData(currentNode);
+                if (nomeCartella == "..") {
+                    currentNode = currentNode.parent;
+                    currentPath.remove(currentPath.size() -1);
+                } else {
+                    currentPath.add(nomeCartella);
+                    currentNode = currentNode.getChildren().get(pos);
+                }
+                // monto il path corrente
+                for (String elem: currentPath) {
+                    displayPath += "/" + elem;
+                }
 
+                TextView uiCurrentPath = (TextView) findViewById(R.id.currentPath);
+                uiCurrentPath.setText(displayPath);
+                myAdapter.setData(currentNode);
             }
 
         });
 
         listView.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE_MODAL);
 
-        im.setOnClickListener(new View.OnClickListener() {
+        /**
+         *  creazione elemento su click aggiunta
+         */
+        aggiungiElemento.setOnClickListener(new View.OnClickListener() {
 
             @Override
             public void onClick(final View v) {
@@ -101,24 +113,23 @@ public class MainActivity extends AppCompatActivity {
                 mBuilder.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        creaElemento(nomeCartella, currentNode);
+                        creaElemento(nomeCartella.getText().toString(), currentNode);
                         myAdapter.setData(currentNode);
                     }
-
                 });
 
                 mBuilder.setNegativeButton("Annulla", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int which) {
-                        dialogInterface.dismiss();
+                    dialogInterface.dismiss();
                     }
                 });
 
                 mBuilder.setView(mView);
                 AlertDialog dialog = mBuilder.create();
                 dialog.show();
-
             }
+
         });
 
     } // end onCreate
@@ -128,15 +139,20 @@ public class MainActivity extends AppCompatActivity {
      * @param testo testo dell'elemento da inserire
      * @param currentNode nodo a cui aggiugere l'elemento
      */
-    private void creaElemento(EditText testo, TreeNode<JSONObject> currentNode) {
+    private void creaElemento(String testo, TreeNode<JSONObject> currentNode) {
 
         JSONObject obj = new JSONObject();
         try {
-
+            // creo riferimento al padre quando clicco su una cartella
+            System.out.println("Current node parent : " + currentNode.parent);
             obj.put("type", "folder");
-            obj.put("name", testo.getText().toString());
-            currentNode.addChild(obj);
-            System.out.println("json object created : " + obj);
+            obj.put("name", testo);
+            TreeNode<JSONObject> child = currentNode.addChild(obj);
+
+            if (!testo.equals("..")) {
+                // creo elemento che fa riferimento al padre
+                creaElemento("..", child);
+            }
 
         } catch (JSONException e) {
             e.printStackTrace();
