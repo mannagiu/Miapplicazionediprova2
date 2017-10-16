@@ -20,6 +20,9 @@ import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 
+import com.getbase.floatingactionbutton.FloatingActionButton;
+import com.getbase.floatingactionbutton.FloatingActionsMenu;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -53,6 +56,8 @@ public class MainActivity extends AppCompatActivity {
     private ListView listView;
     private JSONObject jsonSavedOnDisk;
     private Myadapter myAdapter;
+    private DbConnector dbConnector;
+    private FloatingActionsMenu addElement;
 
     public MainActivity () {
 
@@ -60,6 +65,7 @@ public class MainActivity extends AppCompatActivity {
         // creazione elemento root
         // #########################################################################
         this.myAdapter = new Myadapter(MainActivity.this, new ArrayList<Integer>(), new ArrayList<String>());
+        this.dbConnector = new DbConnector();
 
         JSONObject objRoot = new JSONObject();
         try {
@@ -98,8 +104,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        ImageView aggiungiElemento = (ImageView) findViewById(R.id.aggiungiElemento);
-        aggiungiElemento.setImageResource(R.drawable.addfolder);
+        addElement = (FloatingActionsMenu)findViewById(R.id.addElement);
         listView = (ListView) findViewById(R.id.listv);
 
         // adattatore per scambiare dati con la listView
@@ -138,38 +143,11 @@ public class MainActivity extends AppCompatActivity {
         });
 
         listView.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE_MODAL);
+        FloatingActionButton floatingAddFolder  = (FloatingActionButton)findViewById(R.id.addfolder);
+        FloatingActionButton floatingAddFile    = (FloatingActionButton)findViewById(R.id.addfile);
 
-        // creazione elemento su click aggiunta
-        aggiungiElemento.setOnClickListener(new View.OnClickListener() {
-
-            @Override
-            public void onClick(final View v) {
-
-            final AlertDialog.Builder mBuilder = new AlertDialog.Builder(MainActivity.this);
-            final View mView = getLayoutInflater().inflate(R.layout.dialog_newfolder, null);
-            final EditText nomeCartella = (EditText) mView.findViewById(R.id.nome_cartella);
-
-            mBuilder.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    creaElemento(nomeCartella.getText().toString(), currentNode);
-                    myAdapter.setData(currentNode);
-                }
-            });
-
-            mBuilder.setNegativeButton("Annulla", new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialogInterface, int which) {
-                    dialogInterface.dismiss();
-                }
-            });
-
-            mBuilder.setView(mView);
-                AlertDialog dialog = mBuilder.create();
-                dialog.show();
-            }
-
-        });
+        floatingAddFolder.setOnClickListener(this.onClickFloatingButton("folder"));
+        floatingAddFile.setOnClickListener(this.onClickFloatingButton("file"));
 
     } // end onCreate
 
@@ -178,29 +156,29 @@ public class MainActivity extends AppCompatActivity {
      * @param testo testo dell'elemento da inserire
      * @param currentNode nodo a cui aggiugere l'elemento
      */
-    private TreeNode<JSONObject> creaElemento(String testo, TreeNode<JSONObject> currentNode) {
+    private TreeNode<JSONObject> creaElemento(String testo, TreeNode<JSONObject> currentNode, String type) {
 
         JSONObject obj = new JSONObject();
         try {
             // creo riferimento al padre quando clicco su una cartella
             System.out.println("Current node parent : " + currentNode.parent);
-            obj.put("type", "folder");
+            obj.put("type", type);
             obj.put("name", testo);
             TreeNode<JSONObject> child = currentNode.addChild(obj);
 
-            if (!testo.equals("..")) {
+            if (type == "folder" && !testo.equals("..")) {
                 // creo elemento che fa riferimento al padre
-                creaElemento("..", child);
+                creaElemento("..", child, "folder");
             }
 
         } catch (JSONException e) {
             e.printStackTrace();
         }
 
-        salva(encode(root));
-
+        this.dbConnector.salva(this.dbConnector.encode(root));
 
         return currentNode;
+
         // da Android 23 occorre richiedere i permessi di scrittura runtime
         // non è piu sufficiente il manifest
 
@@ -218,26 +196,6 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    private void salva(JSONObject data) {
-
-        String root = Environment.getExternalStorageDirectory().toString();
-
-        try {
-            // Create a new FileWriter object
-            FileWriter fileWriter = new FileWriter(root + "/strutturaDirectory.json");
-
-            System.out.println("filewriter: " + fileWriter);
-            // Writting the jsonObject into sample.json
-            fileWriter.write(data.toString());
-            fileWriter.close();
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-    }
-
-    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     private void leggi() {
 
         String root = Environment.getExternalStorageDirectory().toString();
@@ -275,38 +233,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     * serializza la struttura in un formato json
-     * @param node
-     * @return
-     */
-    private JSONObject encode(TreeNode<JSONObject> node) {
-
-        JSONObject data = new JSONObject();
-
-        if (node.getChildren().size() == 0) {
-            return null;
-        }
-
-        try {
-
-            data = node.data;
-
-            ArrayList<JSONObject> children = new ArrayList<>();
-            for (TreeNode<JSONObject> child: node.getChildren()) {
-                children.add(child.data);
-                // richiamo ricorsivamente sul nodo figlio
-                encode(child);
-            }
-
-            data.put("children" , children);
-
-        } catch (JSONException e) {
-            e.printStackTrace();                                                                                                                                                                                                                                              ;
-        }
-
-        return data;
-    }
 
     /**
      * deserializza il contenuto della stringa in input e costruisce la struttura
@@ -324,22 +250,70 @@ public class MainActivity extends AppCompatActivity {
 
             if (!node.data.get("type").toString().equals("none")) {
                 this.currentNode = node;
-                this.creaElemento(currentNode.data.get("name").toString(), currentNode);
-                for (int i=0; i<children.length();i++) {
+                this.creaElemento(currentNode.data.get("name").toString(), currentNode, "folder");
+                for (int i=0; i< children.length();i++) {
                     JSONObject obj = (JSONObject)children.get(i);
                     decode(new TreeNode<JSONObject>(obj), new JSONArray(obj.get("children").toString()));
                 }
             }
+            // aggiorno i dati nelle vista
             this.myAdapter.setData(currentNode);
 
-        } catch (JSONException exception) {
-
-            System.out.println("Eccezione decode " + exception);
+        } catch (JSONException e) {
+            e.printStackTrace();
         }
 
         return null;
     }
 
+
+    private View.OnClickListener onClickFloatingButton(final String type) {
+
+        return new View.OnClickListener() {
+
+            @Override
+            public void onClick(final View v) {
+
+                final AlertDialog.Builder mBuilder = new AlertDialog.Builder(MainActivity.this);
+                final View mView;
+                mView = getLayoutInflater().inflate(R.layout.dialog_newfile, null);
+                final TextView createElementTitle = (TextView) mView.findViewById(R.id.createElementTitle);
+
+                System.out.println("createElementTitle " + createElementTitle);
+
+                if (type == "folder") {
+                    createElementTitle.setText(R.string.nomecartella);
+                } else {
+                    createElementTitle.setText("Crea nuovo file");
+                }
+
+                final EditText nomeCartella = (EditText) mView.findViewById(R.id.nomefile);
+
+                mBuilder.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        creaElemento(nomeCartella.getText().toString(), currentNode, "folder");
+                        myAdapter.setData(currentNode);
+                        addElement.collapse();
+                    }
+                });
+
+                mBuilder.setNegativeButton("Annulla", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int which) {
+                        dialogInterface.dismiss();
+                    }
+                });
+
+                mBuilder.setView(mView);
+                AlertDialog dialog = mBuilder.create();
+                dialog.show();
+
+            } // end onClick
+
+        };
+
+    }
 
 }
 

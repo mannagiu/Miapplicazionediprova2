@@ -2,6 +2,21 @@
 <resources>
     <color name="colorPrimary">#3F51B5</color>
     <color name="colorPrimaryDark">#303F9F</color>
-    <color name="colorAccent">#FF4081</color>
-    <drawable name="light_blue">#6495ed</drawable>
+    <color name="colorAccent">#ff4081</color>
+    <color name="colorFolderTitle">#ff4081</color>
+
+    <color name="colorSlide1">#85c115</color>
+    <color name="colorSlide2">#279bdf</color>
+    <color name="colorSlide3">#8b1ec6</color>
+
+    <color name="colorActivatedItem">#ccd3d4</color>
+    <color name="colorCheckedItem">#6c7171</color>
+    <color name="colorPressedItem">#c3cecf</color>
+
+
+    <color name="activeDots">#ffffff</color>
+    <color name="inactiveDots">#83878b</color>
+
+
+
 </resources>
