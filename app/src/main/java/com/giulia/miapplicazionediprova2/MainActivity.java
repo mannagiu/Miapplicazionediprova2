@@ -262,7 +262,7 @@ public class MainActivity extends AppCompatActivity {
                 this.jsonSavedOnDisk = new JSONObject(data);
 
                 this.root = new TreeNode<>(this.jsonSavedOnDisk);
-                this.decode(this.root);
+                this.decode(this.root, new JSONArray(this.jsonSavedOnDisk.get("children").toString()));
             } catch (JSONException e) {
                 e.printStackTrace();
             }
@@ -311,22 +311,23 @@ public class MainActivity extends AppCompatActivity {
     /**
      * deserializza il contenuto della stringa in input e costruisce la struttura
      */
-    private JSONObject decode(TreeNode<JSONObject> node) {
+    private JSONObject decode(TreeNode<JSONObject> node, JSONArray children) {
 
         System.out.print("decode jsonSavedOnDisk : " + this.jsonSavedOnDisk);
 
         try {
 
-            JSONArray children = new JSONArray(this.jsonSavedOnDisk.get("children").toString());
+            // JSONArray children = new JSONArray(this.jsonSavedOnDisk.get("children").toString());
             if (children.length() == 0) {
                 return null;
             }
 
-            if (node.data.get("type").toString().equals("none")) {
+            if (!node.data.get("type").toString().equals("none")) {
                 this.currentNode = node;
                 this.creaElemento(currentNode.data.get("name").toString(), currentNode);
                 for (int i=0; i<children.length();i++) {
-                    decode(new TreeNode<JSONObject>((JSONObject)children.get(i)));
+                    JSONObject obj = (JSONObject)children.get(i);
+                    decode(new TreeNode<JSONObject>(obj), new JSONArray(obj.get("children").toString()));
                 }
             }
             this.myAdapter.setData(currentNode);
