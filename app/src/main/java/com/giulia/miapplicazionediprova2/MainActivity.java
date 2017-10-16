@@ -3,9 +3,11 @@ package com.giulia.miapplicazionediprova2;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.annotation.NonNull;
+import android.support.annotation.RequiresApi;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
@@ -17,6 +19,8 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
+
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -26,6 +30,7 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.jar.Manifest;
@@ -46,13 +51,16 @@ public class MainActivity extends AppCompatActivity {
     private ArrayList<String> currentPath = new ArrayList<>();
     private TextView textview;
     private ListView listView;
-    private String jsonSavedOnDisk = "";
+    private JSONObject jsonSavedOnDisk;
+    private Myadapter myAdapter;
 
     public MainActivity () {
 
         // #########################################################################
         // creazione elemento root
         // #########################################################################
+        this.myAdapter = new Myadapter(MainActivity.this, new ArrayList<Integer>(), new ArrayList<String>());
+
         JSONObject objRoot = new JSONObject();
         try {
             objRoot.put("type", "none");
@@ -95,8 +103,7 @@ public class MainActivity extends AppCompatActivity {
         listView = (ListView) findViewById(R.id.listv);
 
         // adattatore per scambiare dati con la listView
-        final Myadapter myAdapter = new Myadapter(MainActivity.this, new ArrayList<Integer>(), new ArrayList<String>());
-        listView.setAdapter(myAdapter);
+        listView.setAdapter(this.myAdapter);
         textview = (TextView) findViewById(R.id.view);
 
         // click su elemento della lista
@@ -145,21 +152,21 @@ public class MainActivity extends AppCompatActivity {
             mBuilder.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
-                creaElemento(nomeCartella.getText().toString(), currentNode);
-                myAdapter.setData(currentNode);
+                    creaElemento(nomeCartella.getText().toString(), currentNode);
+                    myAdapter.setData(currentNode);
                 }
             });
 
             mBuilder.setNegativeButton("Annulla", new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialogInterface, int which) {
-                dialogInterface.dismiss();
+                    dialogInterface.dismiss();
                 }
             });
 
             mBuilder.setView(mView);
-            AlertDialog dialog = mBuilder.create();
-            dialog.show();
+                AlertDialog dialog = mBuilder.create();
+                dialog.show();
             }
 
         });
@@ -171,7 +178,7 @@ public class MainActivity extends AppCompatActivity {
      * @param testo testo dell'elemento da inserire
      * @param currentNode nodo a cui aggiugere l'elemento
      */
-    private void creaElemento(String testo, TreeNode<JSONObject> currentNode) {
+    private TreeNode<JSONObject> creaElemento(String testo, TreeNode<JSONObject> currentNode) {
 
         JSONObject obj = new JSONObject();
         try {
@@ -190,9 +197,14 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
 
+        salva(encode(root));
+
+
+        return currentNode;
         // da Android 23 occorre richiedere i permessi di scrittura runtime
         // non è piu sufficiente il manifest
 
+        /*
         ContextCompat.checkSelfPermission(this, android.Manifest.permission.WRITE_EXTERNAL_STORAGE);
         if(ContextCompat.checkSelfPermission(MainActivity.this,
                 android.Manifest.permission.WRITE_EXTERNAL_STORAGE) !=
@@ -202,7 +214,7 @@ public class MainActivity extends AppCompatActivity {
         }else{
             salva(encode(root));
         }
-
+        */
 
     }
 
@@ -225,6 +237,7 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     private void leggi() {
 
         String root = Environment.getExternalStorageDirectory().toString();
@@ -239,10 +252,21 @@ public class MainActivity extends AppCompatActivity {
             String data = "";
             while((s = br.readLine()) != null) {
                 System.out.println(s);
-                this.jsonSavedOnDisk = s;
+                data = s;
             }
 
-            this.decode(this.root);
+            System.out.println("leggi json");
+
+            try {
+                System.out.println(data);
+                this.jsonSavedOnDisk = new JSONObject(data);
+
+                this.root = new TreeNode<>(this.jsonSavedOnDisk);
+                this.decode(this.root);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+
 
             fileReader.close();
 
@@ -267,6 +291,7 @@ public class MainActivity extends AppCompatActivity {
         try {
 
             data = node.data;
+
             ArrayList<JSONObject> children = new ArrayList<>();
             for (TreeNode<JSONObject> child: node.getChildren()) {
                 children.add(child.data);
@@ -277,7 +302,7 @@ public class MainActivity extends AppCompatActivity {
             data.put("children" , children);
 
         } catch (JSONException e) {
-            System.out.println(e)                                                                                                                                                                                                                                               ;
+            e.printStackTrace();                                                                                                                                                                                                                                              ;
         }
 
         return data;
@@ -286,16 +311,32 @@ public class MainActivity extends AppCompatActivity {
     /**
      * deserializza il contenuto della stringa in input e costruisce la struttura
      */
-    private void decode(TreeNode<JSONObject> node) {
+    private JSONObject decode(TreeNode<JSONObject> node) {
+
+        System.out.print("decode jsonSavedOnDisk : " + this.jsonSavedOnDisk);
 
         try {
-            JSONObject jsonObj = new JSONObject(this.jsonSavedOnDisk);
-            this.creaElemento(jsonObj.get("name").toString(), node);
+
+            JSONArray children = new JSONArray(this.jsonSavedOnDisk.get("children").toString());
+            if (children.length() == 0) {
+                return null;
+            }
+
+            if (node.data.get("type").toString().equals("none")) {
+                this.currentNode = node;
+                this.creaElemento(currentNode.data.get("name").toString(), currentNode);
+                for (int i=0; i<children.length();i++) {
+                    decode(new TreeNode<JSONObject>((JSONObject)children.get(i)));
+                }
+            }
+            this.myAdapter.setData(currentNode);
 
         } catch (JSONException exception) {
-            System.out.println(exception);
+
+            System.out.println("Eccezione decode " + exception);
         }
 
+        return null;
     }
 
 
